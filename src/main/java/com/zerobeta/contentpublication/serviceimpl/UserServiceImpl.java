@@ -8,6 +8,7 @@ import com.zerobeta.contentpublication.entity.ContentCategory;
 import com.zerobeta.contentpublication.entity.Role;
 import com.zerobeta.contentpublication.entity.User;
 import com.zerobeta.contentpublication.entity.UserDetail;
+import com.zerobeta.contentpublication.exception.UserException;
 import com.zerobeta.contentpublication.respository.ContentCategoryRepository;
 import com.zerobeta.contentpublication.respository.RoleRepository;
 import com.zerobeta.contentpublication.respository.UserRepository;
@@ -62,19 +63,24 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public Response singUp(BaseAuthRequest singUpRequest) {
 
-        User user = new User();
-        user.setLoginName(singUpRequest.getLoginName());
-        user.setPassword(encoder.encode(singUpRequest.getPassword()));
-        user.setProfileCompleted(Boolean.FALSE);
-        user.setCreatedDate(new Date());
+        logger.info("Entering into singUp loginName :: {}", singUpRequest.getLoginName());
+        try {
+            User user = new User();
+            user.setLoginName(singUpRequest.getLoginName());
+            user.setPassword(encoder.encode(singUpRequest.getPassword()));
+            user.setProfileCompleted(Boolean.FALSE);
+            user.setCreatedDate(new Date());
 
-        Optional<Role> role = roleRepository.findById(1);
-        if (role.isPresent()){
-            user.getUserRole().add(role.get());
-            role.get().getUsers().add(user);
+            Optional<Role> role = roleRepository.findById(1);
+            if (role.isPresent()){
+                user.getUserRole().add(role.get());
+                role.get().getUsers().add(user);
+            }
+            return Response.success(userRepository.save(user));
+
+        } catch (UserException exception){
+            throw new UserException("Exception occurred during singUp and Message ::"+ exception.getMessage());
         }
-
-        return Response.success(userRepository.save(user));
 
     }
 
@@ -82,103 +88,131 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public Response completeProfile(Profile profile) {
 
-        Optional<User> user = userRepository.findById(profile.getId());
+        try {
+            Optional<User> user = userRepository.findById(profile.getId());
 
-        if (user.isPresent()){
-            user.get().setProfileCompleted(true);
-            user.get().setProfileCompletedDate(new Date());
-            Optional<Role> role = roleRepository.findById(2);
-            Optional<ContentCategory> contentCategory = contentCategoryRepository.findById(1);
+            if (user.isPresent()){
+                user.get().setProfileCompleted(true);
+                user.get().setProfileCompletedDate(new Date());
+                Optional<Role> role = roleRepository.findById(2);
 
-            if (role.isPresent()){
-                user.get().getUserRole().add(role.get());
-                role.get().getUsers().add(user.get());
+                if (role.isPresent()){
+                    user.get().getUserRole().add(role.get());
+                    role.get().getUsers().add(user.get());
+                }
+
+                UserDetail userDetail = new UserDetail();
+                userDetail.setUser(user.get());
+                userDetail.setName(profile.getName());
+                userDetail.setCountry(profile.getCountry());
+                userDetail.setDescriptions(profile.getDescriptions());
+
+                user.get().setUserDetail(userDetail);
+
+                return Response.success(userRepository.save(user.get()));
+
+            } else {
+                return Response.failure("User Not found");
             }
 
-            UserDetail userDetail = new UserDetail();
-            userDetail.setUser(user.get());
-            userDetail.setName(profile.getName());
-            userDetail.setCountry(profile.getCountry());
-            userDetail.setDescriptions(profile.getDescriptions());
-
-            user.get().setUserDetail(userDetail);
-
-            return Response.success(userRepository.save(user.get()));
-
-        } else {
-            return Response.success("User Not found");
+        } catch (UserException exception){
+            throw new UserException("Exception occurred during completeProfile and Message ::"+ exception.getMessage());
         }
     }
 
     @Override
     public Response contentSubscribe(Integer contentId) {
 
-        Optional<User> user = userRepository.findById(Util.getUserDetails().getId());
-        Optional<ContentCategory> contentCategory = contentCategoryRepository.findById(1);
+        try {
+            Optional<User> user = userRepository.findById(Util.getUserDetails().getId());
+            Optional<ContentCategory> contentCategory = contentCategoryRepository.findById(1);
 
-        if (user.isPresent()){
-            if (contentCategory.isPresent()){
-                user.get().getContentCategories().add(contentCategory.get());
-                contentCategory.get().getUsers().add(user.get());
+            if (user.isPresent()){
+                if (contentCategory.isPresent()){
+                    user.get().getContentCategories().add(contentCategory.get());
+                    contentCategory.get().getUsers().add(user.get());
+                }
+                return Response.success(userRepository.save(user.get()));
+            } else {
+                return Response.failure("user not found");
             }
-            return Response.success(userRepository.save(user.get()));
-        } else {
-            return Response.failure("user not found");
+        } catch (UserException exception){
+            throw new UserException("Exception occurred during contentSubscribe and Message ::"+ exception.getMessage());
         }
     }
 
     @Override
     public Response getUserSubscribe() {
-        Optional<User> user = userRepository.findById(Util.getUserDetails().getId());
-        return user.map(value -> Response.success(value.getContentCategories().stream()
-                .map(ContentCategory::getCategoryName).
-                        collect(Collectors.toList()))).orElseGet(() -> Response.failure("user not found"));
+
+        try {
+            Optional<User> user = userRepository.findById(Util.getUserDetails().getId());
+            return user.map(value -> Response.success(value.getContentCategories().stream()
+                    .map(ContentCategory::getCategoryName).
+                            collect(Collectors.toList()))).orElseGet(() -> Response.failure("user not found"));
+
+        } catch (UserException exception){
+            throw new UserException("Exception occurred during getUserSubscribe and Message ::"+ exception.getMessage());
+        }
 
     }
 
     @Override
     public Response singIn(BaseAuthRequest singInRequest) {
-        Authentication authentication = authenticationManager
-                .authenticate(new UsernamePasswordAuthenticationToken(singInRequest.getLoginName(),
-                        singInRequest.getPassword()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            Authentication authentication = authenticationManager
+                    .authenticate(new UsernamePasswordAuthenticationToken(singInRequest.getLoginName(),
+                            singInRequest.getPassword()));
 
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String jwt = jwtTokenUtil.generateTokenFromUsername(userDetails.getUsername());
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
-        Optional<User> user = userRepository.findById(Util.getUserDetails().getId());
+            String jwt = jwtTokenUtil.generateTokenFromUsername(userDetails.getUsername());
 
-        if (user.isPresent()){
-            user.get().setLastLoginDate(new Date());
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
+            Optional<User> user = userRepository.findById(Util.getUserDetails().getId());
 
-            UserInfo userInfo = new UserInfo();
-            userInfo.setAccessToken(jwt);
-            userInfo.setId(userDetails.getId());
-            userInfo.setProfileCompleted(userDetails.getProfileCompleted());
-            userInfo.setLoginName(userDetails.getUsername());
-            userInfo.setRoles(roles);
+            if (user.isPresent()){
+                user.get().setLastLoginDate(new Date());
 
-            userRepository.save(user.get());
-            return Response.success(userInfo);
-        } else {
-            return Response.success("User Not found");
+                UserInfo userInfo = new UserInfo();
+                userInfo.setAccessToken(jwt);
+                userInfo.setId(userDetails.getId());
+                userInfo.setProfileCompleted(userDetails.getProfileCompleted());
+                userInfo.setLoginName(userDetails.getUsername());
+                userInfo.setRoles(roles);
+
+                userRepository.save(user.get());
+                return Response.success(userInfo);
+            } else {
+                return Response.failure("User Not found");
+            }
+        } catch (UserException exception){
+            throw new UserException("Exception occurred during singIn and Message ::"+ exception.getMessage());
         }
     }
 
     @Override
     public Response singOut(HttpServletResponse httpServletResponse) {
-        httpServletResponse.setHeader(HttpHeaders.AUTHORIZATION, null);
 
-        return Response.success("User Successfully logout");
+        try {
+            httpServletResponse.setHeader(HttpHeaders.AUTHORIZATION, null);
+
+            return Response.success("User Successfully logout");
+        } catch (UserException exception){
+            throw new UserException("Exception occurred during singUp and Message ::"+ exception.getMessage());
+        }
     }
 
     @Override
     public Response checkLoginName(String loginName) {
-        return Response.success(userRepository.findByLoginName(loginName) != null);
+        try {
+            return Response.success(userRepository.findByLoginName(loginName) != null);
+        } catch (UserException exception){
+            throw new UserException("Exception occurred during singUp and Message ::"+ exception.getMessage());
+        }
     }
 }

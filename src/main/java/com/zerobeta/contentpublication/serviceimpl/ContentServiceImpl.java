@@ -6,10 +6,12 @@ import com.zerobeta.contentpublication.entity.Content;
 import com.zerobeta.contentpublication.entity.ContentCategory;
 import com.zerobeta.contentpublication.entity.ContentComment;
 import com.zerobeta.contentpublication.entity.User;
+import com.zerobeta.contentpublication.exception.ContentException;
 import com.zerobeta.contentpublication.respository.ContentCategoryRepository;
 import com.zerobeta.contentpublication.respository.ContentRepository;
 import com.zerobeta.contentpublication.respository.UserRepository;
 import com.zerobeta.contentpublication.service.ContentService;
+import static com.zerobeta.contentpublication.util.Constants.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -36,122 +38,159 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public Response addContent(Integer userId,ContentDomain contentDomain) {
 
-        Content content = new Content();
-        content.setTitle(contentDomain.getTitle());
-        content.setPublishedDate(new Date());
-        content.setSummary(contentDomain.getSummary());
-        content.setDetail(contentDomain.getDetail());
-        content.setIsPublished(false);
+        try {
+            Content content = new Content();
+            content.setTitle(contentDomain.getTitle());
+            content.setPublishedDate(new Date());
+            content.setSummary(contentDomain.getSummary());
+            content.setDetail(contentDomain.getDetail());
+            content.setIsPublished(false);
 
-        Optional<User> user = userRepository.findById(userId);
-        user.ifPresent(content::setUser);
+            Optional<User> user = userRepository.findById(userId);
+            user.ifPresent(content::setUser);
 
-        Optional<ContentCategory> contentCategory = contentCategoryRepository.findById(contentDomain.getCategoryId());
-        contentCategory.ifPresent(content::setContentCategory);
+            Optional<ContentCategory> contentCategory = contentCategoryRepository.findById(contentDomain.getCategoryId());
+            contentCategory.ifPresent(content::setContentCategory);
 
-        contentRepository.save(content);
+            contentRepository.save(content);
 
-        contentRepository.save(content);
-        return Response.success(true);
+            contentRepository.save(content);
+            return Response.success(true);
+        } catch (ContentException exception){
+            throw new ContentException("Exception occurred during addContent and Message ::"+ exception.getMessage());
+        }
     }
 
     @Override
     public Response editContent(ContentDomain contentDomain) {
 
-        Optional<Content> content = contentRepository.findById(contentDomain.getContentId());
+        try {
+            Optional<Content> content = contentRepository.findById(contentDomain.getContentId());
 
-        if (content.isPresent()){
-            Content editContent = content.get();
-            editContent.setTitle(contentDomain.getTitle());
-            editContent.setSummary(contentDomain.getSummary());
-            editContent.setDetail(contentDomain.getDetail());
-            editContent.setEditDate(new Date());
+            if (content.isPresent()){
+                Content editContent = content.get();
+                editContent.setTitle(contentDomain.getTitle());
+                editContent.setSummary(contentDomain.getSummary());
+                editContent.setDetail(contentDomain.getDetail());
+                editContent.setEditDate(new Date());
+                Optional<ContentCategory> contentCategory = contentCategoryRepository.findById(contentDomain.getCategoryId());
+                contentCategory.ifPresent(editContent::setContentCategory);
 
-            return Response.success(contentRepository.save(editContent));
-        } else {
-            return Response.failure("Content not found");
+                return Response.success(contentRepository.save(editContent));
+            } else {
+                return Response.failure(NOT_FOUND);
+            }
+        } catch (ContentException exception){
+            throw new ContentException("Exception occurred during editContent and Message ::"+ exception.getMessage());
         }
     }
 
     @Override
     public Response deleteContent(Integer contentId) {
-        Optional<Content> content = contentRepository.findById(contentId);
 
-        if (content.isPresent()){
-            contentRepository.deleteById(contentId);
-            return Response.success("Content Deleted successfully");
-        } else
-            return Response.failure("Content not found");
+        try {
+            Optional<Content> content = contentRepository.findById(contentId);
+
+            if (content.isPresent()){
+                contentRepository.deleteById(contentId);
+                return Response.success("Content Deleted successfully");
+            } else
+                return Response.failure(NOT_FOUND);
+        } catch (ContentException exception){
+            throw new ContentException("Exception occurred during deleteContent and Message ::"+ exception.getMessage());
+        }
 
     }
 
     @Override
     public Response publishContent(Integer contentId, String status) {
-        Optional<Content> content = contentRepository.findById(contentId);
 
-        if (content.isPresent()){
-            content.get().setIsPublished("true".equals(status));
+        try {
+            Optional<Content> content = contentRepository.findById(contentId);
 
-            if("true".equals(status)){
-                content.get().setIsPublished(true);
-                String categoryTypeAsTopic = content.get().getContentCategory().getCategoryName();
+            if (content.isPresent()){
+                content.get().setIsPublished("true".equals(status));
 
-                String topicName = null;
-                if(categoryTypeAsTopic.equals("ML/AL")){
-                    topicName = "ML-AL";
-                } else if(categoryTypeAsTopic.equals("Big Data")){
-                    topicName = "Big-Data";
-                } else {
-                    topicName = categoryTypeAsTopic;
+                if("true".equals(status)){
+                    content.get().setIsPublished(true);
+                    String categoryTypeAsTopic = content.get().getContentCategory().getCategoryName();
+
+                    String topicName = null;
+                    if(categoryTypeAsTopic.equals(MLAL)){
+                        topicName = ML_AL;
+                    } else if(categoryTypeAsTopic.equals(BIG_DATA)){
+                        topicName = BIGDATA;
+                    } else {
+                        topicName = categoryTypeAsTopic;
+                    }
+
+                    kafkaTemplate.send(topicName, content.get().getTitle() + " Published" );
                 }
-                System.out.println(topicName);
-
-                kafkaTemplate.send(topicName, content.get().getTitle() + " Published" );
-            }
-            contentRepository.save(content.get());
-            return Response.success("Content publish status changed successfully");
-        } else
-            return Response.failure("Content not found");
+                contentRepository.save(content.get());
+                return Response.success("Content publish status changed successfully");
+            } else
+                return Response.failure(NOT_FOUND);
+        } catch (ContentException exception){
+            throw new ContentException("Exception occurred during publishContent and Message ::"+ exception.getMessage());
+        }
     }
 
     @Override
     public Response getAllContent() {
-        return Response.success(contentRepository.findAll());
+
+        try {
+            return Response.success(contentRepository.findAll());
+        } catch (ContentException exception){
+            throw new ContentException("Exception occurred during getAllContent and Message ::"+ exception.getMessage());
+        }
     }
 
     @Override
     public Response getContent(Integer contentId) {
-        Optional<Content> content = contentRepository.findById(contentId);
-        return content.map(Response::success).orElseGet(() -> Response.success(null));
+
+        try {
+            Optional<Content> content = contentRepository.findById(contentId);
+            return content.map(Response::success).orElseGet(() -> Response.success(null));
+        } catch (ContentException exception){
+            throw new ContentException("Exception occurred during getContent and Message ::"+ exception.getMessage());
+        }
     }
 
     @Override
     public Response getContentByUserId(Integer userId) {
 
-        Optional<User> user = userRepository.findById(userId);
-        return user.map(value -> Response.success(contentRepository.findByUser(value))).orElse(null);
+        try {
+            Optional<User> user = userRepository.findById(userId);
+            return user.map(value -> Response.success(contentRepository.findByUser(value))).orElse(null);
+        } catch (ContentException exception){
+            throw new ContentException("Exception occurred during getContentByUserId and Message ::"+ exception.getMessage());
+        }
     }
 
     @Override
     public Response addComment(Integer userId, ContentDomain contentDomain) {
 
-        ContentComment contentComment = new ContentComment();
-        contentComment.setComment(contentDomain.getComment());
+        try {
+            ContentComment contentComment = new ContentComment();
+            contentComment.setComment(contentDomain.getComment());
 
-        Optional<User> user = userRepository.findById(userId);
-        user.ifPresent(contentComment::setUser);
+            Optional<User> user = userRepository.findById(userId);
+            user.ifPresent(contentComment::setUser);
 
-        Optional<Content> content = contentRepository.findById(contentDomain.getContentId());
+            Optional<Content> content = contentRepository.findById(contentDomain.getContentId());
 
-        if (content.isPresent()){
-            contentComment.setContent(content.get());
-            content.get().getContentComments().add(contentComment);
+            if (content.isPresent()){
+                contentComment.setContent(content.get());
+                content.get().getContentComments().add(contentComment);
 
-            contentRepository.save(content.get());
+                contentRepository.save(content.get());
 
-            return Response.success("Content comment successfully");
-        } else
-            return Response.failure("Content not found");
+                return Response.success("Content comment successfully");
+            } else
+                return Response.failure(NOT_FOUND);
+        } catch (ContentException exception){
+            throw new ContentException("Exception occurred during addComment and Message ::"+ exception.getMessage());
+        }
 
     }
 }

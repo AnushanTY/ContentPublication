@@ -1,7 +1,5 @@
 package com.zerobeta.contentpublication.domain;
 
-import javax.persistence.Column;
-
 public class ContentDomain {
 
     private  Integer contentId;

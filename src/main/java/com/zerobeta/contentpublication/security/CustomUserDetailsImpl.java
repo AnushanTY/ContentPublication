@@ -2,7 +2,6 @@ package com.zerobeta.contentpublication.security;
 
 import com.zerobeta.contentpublication.entity.User;
 import com.zerobeta.contentpublication.respository.UserRepository;
-import com.zerobeta.contentpublication.security.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

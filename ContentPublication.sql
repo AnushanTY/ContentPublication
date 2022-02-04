@@ -16,6 +16,9 @@ CREATE TABLE user
     login_name        varchar(255) NOT NULL,
     password          varchar(255) NOT NULL,
     profile_completed TINYINT(1),
+    created_date datetime DEFAULT NULL,
+    last_login_date datetime DEFAULT NULL,
+    profile_completed_date datetime DEFAULT NULL,
     PRIMARY KEY (user_id)
 );
 
@@ -61,6 +64,7 @@ CREATE TABLE content
     title        varchar(50)    DEFAULT NULL,
     category_id  int            DEFAULT NULL,
     is_published bit(1)         DEFAULT NULL,
+    edit_date datetime DEFAULT NULL,
     user_id      int            DEFAULT NULL,
 
     PRIMARY KEY (content_id),
@@ -93,3 +97,6 @@ CREATE TABLE user_subscription
     FOREIGN KEY (user_id) REFERENCES user (user_id),
     FOREIGN KEY (category_id) REFERENCES content_category (category_id)
 );
+
+INSERT INTO role VALUES (1,'READ'),(2,'WRITE');
+INSERT INTO content_category VALUES (1,'ML/AL'),(2,'Big Data'),(3,'Micro-services');
