@@ -4,4 +4,6 @@ import com.zerobeta.contentpublication.entity.ContentCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ContentCategoryRepository extends JpaRepository<ContentCategory, Integer> {
+
+    ContentCategory findByCategoryName(String contentCatagoryName);
 }

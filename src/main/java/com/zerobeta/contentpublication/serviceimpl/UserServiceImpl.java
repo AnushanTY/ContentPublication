@@ -121,16 +121,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Response contentSubscribe(Integer contentId) {
+    public Response contentSubscribe(String contentCatagoryName, Integer subbscribeStatus) {
 
         try {
             Optional<User> user = userRepository.findById(Util.getUserDetails().getId());
-            Optional<ContentCategory> contentCategory = contentCategoryRepository.findById(1);
+            ContentCategory contentCategory = contentCategoryRepository.findByCategoryName(contentCatagoryName);
 
-            if (user.isPresent()){
-                if (contentCategory.isPresent()){
-                    user.get().getContentCategories().add(contentCategory.get());
-                    contentCategory.get().getUsers().add(user.get());
+            if (user.isPresent() && contentCategory != null){
+                if (subbscribeStatus ==1){
+                    user.get().getContentCategories().add(contentCategory);
+                    contentCategory.getUsers().add(user.get());
+                } else {
+                    user.get().getContentCategories().remove(contentCategory);
                 }
                 return Response.success(userRepository.save(user.get()));
             } else {

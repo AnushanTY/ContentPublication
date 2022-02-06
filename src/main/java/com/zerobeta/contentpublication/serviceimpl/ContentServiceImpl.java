@@ -12,6 +12,9 @@ import com.zerobeta.contentpublication.respository.ContentRepository;
 import com.zerobeta.contentpublication.respository.UserRepository;
 import com.zerobeta.contentpublication.service.ContentService;
 import static com.zerobeta.contentpublication.util.Constants.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,8 @@ import java.util.Optional;
 
 @Service
 public class ContentServiceImpl implements ContentService {
+
+    private  final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -33,7 +38,6 @@ public class ContentServiceImpl implements ContentService {
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
-
 
     @Override
     public Response addContent(Integer userId,ContentDomain contentDomain) {
@@ -105,6 +109,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public Response publishContent(Integer contentId, String status) {
 
+        logger.info("Enter into publishContent");
         try {
             Optional<Content> content = contentRepository.findById(contentId);
 
@@ -123,7 +128,7 @@ public class ContentServiceImpl implements ContentService {
                     } else {
                         topicName = categoryTypeAsTopic;
                     }
-
+                    logger.info("publishContent topic name ::{}", topicName);
                     kafkaTemplate.send(topicName, content.get().getTitle() + " Published" );
                 }
                 contentRepository.save(content.get());
@@ -139,7 +144,7 @@ public class ContentServiceImpl implements ContentService {
     public Response getAllContent() {
 
         try {
-            return Response.success(contentRepository.findAll());
+            return Response.success(contentRepository.findByIsPublishedTrue());
         } catch (ContentException exception){
             throw new ContentException("Exception occurred during getAllContent and Message ::"+ exception.getMessage());
         }

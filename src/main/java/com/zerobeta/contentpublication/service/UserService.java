@@ -13,7 +13,7 @@ public interface UserService {
 
     Response completeProfile(Profile profile);
 
-    Response contentSubscribe(Integer contentId);
+    Response contentSubscribe(String contentCatagoryName, Integer subbscribeStatus);
 
     Response getUserSubscribe();
 

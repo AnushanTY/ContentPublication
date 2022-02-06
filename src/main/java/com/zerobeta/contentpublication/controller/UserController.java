@@ -11,6 +11,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
@@ -51,11 +55,12 @@ public class UserController {
     }
 
     @ApiOperation(value = "contentSubscribe", response = Response.class, tags = "contentSubscribe")
-    @PostMapping(value = "/contentsubscribe", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Response> contentSubscribe(@RequestParam(name = "loginName") Integer contentId){
+    @GetMapping(value = "/contentsubscribe", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Response> contentSubscribe(@RequestParam(name = "contentCatagoryName") String contentCatagoryName,
+                                                     @RequestParam(name = "subscribeStatus") Integer subscribeStatus){
 
-        logger.info("Entering into contentSubscribe ::{}",contentId );
-        return ResponseEntity.ok().body(userService.contentSubscribe(contentId));
+        logger.info("Entering into contentSubscribe ::{}",contentCatagoryName );
+        return ResponseEntity.ok().body(userService.contentSubscribe(contentCatagoryName, subscribeStatus));
     }
 
     @ApiOperation(value = "getUserSubscribe", response = Response.class, tags = "getUserSubscribe")

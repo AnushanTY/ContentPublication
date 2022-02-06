@@ -9,4 +9,6 @@ import java.util.List;
 public interface ContentRepository extends JpaRepository<Content, Integer> {
 
     List<Content> findByUser(User user);
+
+    List<Content> findByIsPublishedTrue();
 }

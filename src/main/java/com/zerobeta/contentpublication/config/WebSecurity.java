@@ -75,7 +75,7 @@ public class WebSecurity extends WebSecurityConfigurerAdapter {
                 .and()
                 .authorizeRequests()
                 .antMatchers(AUTH_WHITELIST).permitAll()
-                .antMatchers("/api/auth/signin","/api/auth/signup","/api/auth/checkloginname","/live-notification")
+                .antMatchers("/api/auth/signin","/api/auth/signup","/api/auth/checkloginname","/notification/**")
                 .permitAll()
                 .anyRequest()
                 .authenticated();

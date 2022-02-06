@@ -10,6 +10,6 @@ public class Constants {
     public static final String MLAL= "ML/AL";
     public static final String BIG_DATA="Big Data";
 
-    public static final String ML_AL= "ML/AL";
-    public static final String BIGDATA="Big Data";
+    public static final String ML_AL= "ML-AL";
+    public static final String BIGDATA="Big-Data";
 }
